@@ -56,4 +56,20 @@ void main() {
     expect(tester.getSemantics(find.byType(InkWell)), containsSemantics(label: 'Companion plants\nExpand', isButton: true, isExpanded: false));
     handle.dispose();
   });
+
+  testWidgets("a button over a collapsed preview doesn't make the preview a button", (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(app(GrowableNotifier(
+      child: Growable(
+        collapsed: Stack(alignment: Alignment.bottomCenter, children: [
+          const Column(children: [Text('Aphid midge'), Text('Ladybug'), SizedBox(height: 40)]),
+          GrowableButton(child: GrowableIcon()),
+        ]),
+        expanded: const SizedBox(),
+      ),
+    )));
+    expect(tester.getSemantics(find.text('Ladybug')), isNot(containsSemantics(isButton: true)));
+    expect(tester.getSemantics(find.byType(InkWell)), containsSemantics(label: 'Expand', isButton: true, isExpanded: false));
+    handle.dispose();
+  });
 }

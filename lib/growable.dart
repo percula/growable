@@ -827,7 +827,10 @@ class GrowableSemantics extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = GrowableController.of(context);
+    // Its own node, so the toggle doesn't take over what's around it (e.g.
+    // a button over a collapsed preview would make the preview a button).
     return Semantics(
+      container: true,
       expanded: controller?.expanded ?? false,
       label: label,
       child: child,
