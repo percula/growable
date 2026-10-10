@@ -429,16 +429,19 @@ class Growable extends StatelessWidget {
         this.controller ?? GrowableController.of(context, required: true);
     final theme = GrowableThemeData.withDefaults(this.theme, context);
 
+    // Each part is its own node for screen readers. Otherwise plain text in
+    // them merges into the nearest node above, often a tappable header or
+    // list item, where screen readers can't reach it as text.
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        collapsed,
+        Semantics(container: true, child: collapsed),
         AnimatedCrossFade(
           alignment: theme.alignment!,
           firstChild: Row(
             children: [],
           ),
-          secondChild: expanded,
+          secondChild: Semantics(container: true, child: expanded),
           firstCurve: Interval(theme.collapsedFadeStart, theme.collapsedFadeEnd,
               curve: theme.fadeCurve!),
           secondCurve: Interval(theme.expandedFadeStart, theme.expandedFadeEnd,
@@ -592,6 +595,9 @@ class GrowablePanel extends StatelessWidget {
         }
         return GestureDetector(
           behavior: HitTestBehavior.translucent,
+          // A pointer shortcut only: to screen readers the body is its
+          // content, not a button (the header or GrowableButton toggles).
+          excludeFromSemantics: true,
           child: widget,
           onTap: () {
             final controller = GrowableController.of(context);
@@ -729,6 +735,14 @@ class _GrowableIconState extends State<GrowableIcon>
     }
   }
 
+  String? _semanticLabel(BuildContext context) {
+    final localizations = Localizations.of<MaterialLocalizations>(context, MaterialLocalizations);
+    if (localizations == null) return null;
+    return (controller?.expanded ?? true)
+        ? localizations.expandedIconTapHint
+        : localizations.collapsedIconTapHint;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = GrowableThemeData.combine(widget.theme, GrowableThemeData.defaults);
@@ -749,6 +763,8 @@ class _GrowableIconState extends State<GrowableIcon>
               showSecondIcon ? theme.collapseIcon! : theme.growIcon!,
               color: widget.iconColor ?? theme.iconColor,
               size: widget.iconSize ?? theme.iconSize ?? IconTheme.of(context).size ?? 24.0,
+              // What tapping does, for a GrowableButton with only this icon.
+              semanticLabel: _semanticLabel(context),
             ),
           );
         },
@@ -758,29 +774,64 @@ class _GrowableIconState extends State<GrowableIcon>
 }
 
 /// Toggles the state of [GrowableController] when the user clicks on it.
+///
+/// Screen readers hear a button that's expanded or collapsed, labelled
+/// [semanticLabel] or else [child]'s own text (a [GrowableIcon] alone says
+/// "Expand" or "Collapse").
 class GrowableButton extends StatelessWidget {
   final Widget? child;
   final GrowableThemeData? theme;
 
-  GrowableButton({this.child, this.theme});
+  /// What the button shows or hides, e.g. "Companion plants".
+  final String? semanticLabel;
+
+  GrowableButton({this.child, this.theme, this.semanticLabel});
 
   @override
   Widget build(BuildContext context) {
     final controller = GrowableController.of(context, required: true);
     final theme = GrowableThemeData.withDefaults(this.theme, context);
 
+    final Widget button;
     if (theme.useInkWell!) {
-      return InkWell(
+      button = InkWell(
         onTap: controller?.toggle,
         child: child,
         borderRadius: theme.inkWellBorderRadius!,
       );
     } else {
-      return GestureDetector(
+      button = GestureDetector(
         onTap: controller?.toggle,
         child: child,
       );
     }
+    // Neither InkWell nor GestureDetector says it's a button.
+    return GrowableSemantics(
+      label: semanticLabel,
+      child: Semantics(button: true, child: button),
+    );
+  }
+}
+
+/// Tells screen readers that [child], a control that toggles the
+/// surrounding [GrowableController] (e.g. a ListTile whose onTap toggles
+/// it), shows or hides content, and whether that content is showing.
+class GrowableSemantics extends StatelessWidget {
+  final Widget child;
+
+  /// What the control shows or hides, if [child] doesn't say.
+  final String? label;
+
+  const GrowableSemantics({super.key, required this.child, this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = GrowableController.of(context);
+    return Semantics(
+      expanded: controller?.expanded ?? false,
+      label: label,
+      child: child,
+    );
   }
 }
 
