@@ -57,6 +57,7 @@ class EventPhotos extends StatelessWidget {
       child: Column(
         children: [
           Growable(           // <-- Driven by GrowableController from GrowableNotifier
+            showCollapsedWhenExpanded: false,  // <-- All the photos replace the cover photo
             collapsed: GrowableButton(  // <-- Expands when tapped on the cover photo
               child: buildCoverPhoto(),
             ),
@@ -75,6 +76,11 @@ class EventPhotos extends StatelessWidget {
   }
 }
 ```
+
+By default `collapsed` always shows and `expanded` grows below it, like a header with more beneath
+it. With `showCollapsedWhenExpanded: false`, `expanded` replaces `collapsed` instead, cross-fading
+between them, and the pair is clipped to the one showing, so `collapsed` can be a cut-off preview of
+something taller.
 
 ## Automatic Scrolling
 

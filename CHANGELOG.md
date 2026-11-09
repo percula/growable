@@ -1,3 +1,10 @@
+## 0.0.4
+
+* `Growable.showCollapsedWhenExpanded`: false makes `expanded` replace
+  `collapsed`, cross-fading between them as `expandable`'s `Expandable` does,
+  for a preview that gives way to the whole. Defaults to true, the existing
+  behavior, where `collapsed` stays above `expanded`.
+
 ## 0.0.3
 
 * Accessibility: `Growable`'s collapsed and expanded parts are their own

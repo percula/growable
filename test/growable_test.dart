@@ -72,4 +72,48 @@ void main() {
     expect(tester.getSemantics(find.byType(InkWell)), containsSemantics(label: 'Expand', isButton: true, isExpanded: false));
     handle.dispose();
   });
+
+  group('showCollapsedWhenExpanded', () {
+    Widget growable(GrowableController controller, {required bool showCollapsedWhenExpanded}) => app(GrowableNotifier(
+      controller: controller,
+      child: Growable(
+        showCollapsedWhenExpanded: showCollapsedWhenExpanded,
+        collapsed: const Text('Preview'),
+        expanded: const Text('Everything'),
+      ),
+    ));
+
+    testWidgets('true keeps collapsed above expanded', (tester) async {
+      final controller = GrowableController(initialExpanded: false);
+      await tester.pumpWidget(growable(controller, showCollapsedWhenExpanded: true));
+      controller.toggle();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Preview').hitTestable(), findsOneWidget);
+      expect(find.text('Everything').hitTestable(), findsOneWidget);
+    });
+
+    testWidgets('false replaces collapsed with expanded', (tester) async {
+      final controller = GrowableController(initialExpanded: false);
+      await tester.pumpWidget(growable(controller, showCollapsedWhenExpanded: false));
+      expect(find.text('Preview').hitTestable(), findsOneWidget);
+      expect(find.text('Everything').hitTestable(), findsNothing);
+
+      controller.toggle();
+      await tester.pumpAndSettle();
+      expect(find.text('Preview').hitTestable(), findsNothing);
+      expect(find.text('Everything').hitTestable(), findsOneWidget);
+    });
+
+    testWidgets('false clips a collapsed preview to its own size', (tester) async {
+      await tester.pumpWidget(app(GrowableNotifier(
+        child: Growable(
+          showCollapsedWhenExpanded: false,
+          collapsed: const SizedBox(height: 50, child: OverflowBox(alignment: Alignment.topCenter, maxHeight: 500, child: SizedBox(height: 500))),
+          expanded: const SizedBox(),
+        ),
+      )));
+      expect(find.ancestor(of: find.byType(OverflowBox), matching: find.byType(ClipRect)), findsWidgets);
+    });
+  });
 }

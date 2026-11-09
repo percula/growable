@@ -415,12 +415,22 @@ class Growable extends StatelessWidget {
 
   final GrowableThemeData? theme;
 
+  /// If true (the default), [collapsed] always shows, and [expanded] grows
+  /// below it: a header with more beneath it.
+  ///
+  /// If false, [expanded] replaces [collapsed], cross-fading between the two
+  /// (as the `expandable` package's `Expandable` does): a preview that gives
+  /// way to the whole. The pair is clipped to the size of the one showing, so
+  /// a preview can be cut off from something taller.
+  final bool showCollapsedWhenExpanded;
+
   const Growable({
     super.key,
     required this.collapsed,
     required this.expanded,
     this.controller,
     this.theme,
+    this.showCollapsedWhenExpanded = true,
   });
 
   @override
@@ -432,26 +442,27 @@ class Growable extends StatelessWidget {
     // Each part is its own node for screen readers. Otherwise plain text in
     // them merges into the nearest node above, often a tappable header or
     // list item, where screen readers can't reach it as text.
+    final collapsedPart = Semantics(container: true, child: collapsed);
+    final crossFade = AnimatedCrossFade(
+      alignment: theme.alignment!,
+      firstChild: showCollapsedWhenExpanded ? Row(children: []) : collapsedPart,
+      secondChild: Semantics(container: true, child: expanded),
+      firstCurve: Interval(theme.collapsedFadeStart, theme.collapsedFadeEnd,
+          curve: theme.fadeCurve!),
+      secondCurve: Interval(theme.expandedFadeStart, theme.expandedFadeEnd,
+          curve: theme.fadeCurve!),
+      sizeCurve: theme.sizeCurve!,
+      crossFadeState: controller?.expanded ?? true
+          ? CrossFadeState.showSecond
+          : CrossFadeState.showFirst,
+      duration: theme.animationDuration!,
+    );
+    if (!showCollapsedWhenExpanded) return crossFade;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Semantics(container: true, child: collapsed),
-        AnimatedCrossFade(
-          alignment: theme.alignment!,
-          firstChild: Row(
-            children: [],
-          ),
-          secondChild: Semantics(container: true, child: expanded),
-          firstCurve: Interval(theme.collapsedFadeStart, theme.collapsedFadeEnd,
-              curve: theme.fadeCurve!),
-          secondCurve: Interval(theme.expandedFadeStart, theme.expandedFadeEnd,
-              curve: theme.fadeCurve!),
-          sizeCurve: theme.sizeCurve!,
-          crossFadeState: controller?.expanded ?? true
-              ? CrossFadeState.showSecond
-              : CrossFadeState.showFirst,
-          duration: theme.animationDuration!,
-        ),
+        collapsedPart,
+        crossFade,
       ],
     );
   }
